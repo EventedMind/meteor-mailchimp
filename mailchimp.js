@@ -1,9 +1,9 @@
-var MailChimp = function (options) {
+var MailChimpAPI = function (options) {
   this.options = options || {};
 };
 
-MailChimp.prototype = {
-  constructor: MailChimp,
+MailChimpAPI.prototype = {
+  constructor: MailChimpAPI,
 
   configure: function (options) {
     _.extend(this.options, options);
@@ -38,7 +38,8 @@ MailChimp.prototype = {
   request: function (section, method, options) {
     var url
       , query
-      , response;
+      , response
+      , apiKey = this.apiKey();
 
     options = options || {};
     options.format = options.format || 'json';
@@ -56,7 +57,7 @@ MailChimp.prototype = {
     params = _.omit(options, 'format');
 
     response = Meteor.http.post(url, {
-      data: _.extend(params, {apiKey: this.apiKey()}),
+      data: _.extend(params, {apikey: apiKey}),
       headers: this.headers
     });
 
@@ -69,82 +70,81 @@ MailChimp.prototype = {
     return EJSON.parse(response.content);
   },
 
-  lists: {
-    listByName: function (name) {
-      var result = this.request('lists', 'list', {
-        filters: {
-          list_name: name
-        }
-      });
+  listByName: function (name) {
+    var result = this.request('lists', 'list', {
+      filters: {
+        list_name: name
+      }
+    });
 
-      if (result.total == 0)
-        throw new Meteor.Error('MailChimp list "' + name + '" not found');
+    if (result.total == 0)
+      throw new Meteor.Error('MailChimp list "' + name + '" not found');
 
-      return result.data[0];
-    },
+    return result.data[0];
+  },
 
-    /**
-     * @param {Object} [options]
-     * @param {Boolean} [options.double_optin]
-     * @return {Object}
-     *  {
-     *    email: {String},
-     *    euid: {String},
-     *    leid: {String},
-     *  }
-     */
+  /**
+   * @param {Object} [options]
+   * @param {Boolean} [options.double_optin]
+   * @return {Object}
+   *  {
+   *    email: {String},
+   *    euid: {String},
+   *    leid: {String},
+   *  }
+   */
 
-    subscribe: function (listName, email, options) {
-      options = options || {};
-      return this.request('lists', 'subscribe', _.extend({
-        id: this.listByName(listName).id,
-        email: {
-          email: email
-        }
-      }, options));
-    },
+  subscribeToList: function (listName, email, options) {
+    options = options || {};
 
-    /**
-     * @param {Object} [options]
-     * @param {Boolean} [options.delete_member]
-     * @param {Boolean} [options.send_goodbye]
-     * @param {Boolean} [options.send_notify]
-     * @return {Object}
-     *  {
-     *    email: {String},
-     *    euid: {String},
-     *    leid: {String},
-     *  }
-     */
+    return this.request('lists', 'subscribe', _.extend({
+      id: this.listByName(listName).id,
+      email: {
+        email: email
+      }
+    }, options));
+  },
 
-    unsubscribe: function (listName, email, options) {
-      options = options || {};
-      return this.request('lists', 'unsubscribe', _.extend({
-        id: this.listByName(listName).id,
-        email: {
-          email: email
-        }
-      }, options));
-    },
+  /**
+   * @param {Object} [options]
+   * @param {Boolean} [options.delete_member]
+   * @param {Boolean} [options.send_goodbye]
+   * @param {Boolean} [options.send_notify]
+   * @return {Object}
+   *  {
+   *    email: {String},
+   *    euid: {String},
+   *    leid: {String},
+   *  }
+   */
 
-    /**
-     * @return {Object}
-     *  {
-     *    email: {String},
-     *    euid: {String},
-     *    leid: {String},
-     *  }
-     */
-    updateMember: function (listName, email, options) {
-      options = options || {};
-      return this.request('lists', 'update-member', _.extend({
-        id: this.listByName(listName).id,
-        email: {
-          email: email
-        }
-      }, options));
-    }
+  unsubscribeFromList: function (listName, email, options) {
+    options = options || {};
+    return this.request('lists', 'unsubscribe', _.extend({
+      id: this.listByName(listName).id,
+      email: {
+        email: email
+      }
+    }, options));
+  },
+
+  /**
+   * @return {Object}
+   *  {
+   *    email: {String},
+   *    euid: {String},
+   *    leid: {String},
+   *  }
+   */
+  updateListEmail: function (listName, email, options) {
+    options = options || {};
+    return this.request('lists', 'update-member', _.extend({
+      id: this.listByName(listName).id,
+      email: {
+        email: email
+      }
+    }, options));
   }
 };
 
-MailChimp = new MailChimp;
+MailChimp = new MailChimpAPI;
